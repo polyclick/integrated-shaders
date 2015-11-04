@@ -1,0 +1,29 @@
+@import url(https://fonts.googleapis.com/css?family=Open+Sans:400,700);
+
+html,
+body {
+  margin: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+body {
+  background-color: #fff;
+  font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 14px;
+}
+
+a,
+a:link,
+a:visited {
+  color: #fff;
+  text-decoration: none;
+}
+
+.track {
+  bottom: 25px;
+  color: #fff;
+  left: 25px;
+  position: fixed;
+  z-index: 50;
+}
