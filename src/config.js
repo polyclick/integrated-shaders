@@ -18,8 +18,10 @@ System.config({
     "core-js": "npm:core-js@1.2.3",
     "gsap": "npm:gsap@1.18.0",
     "jquery": "github:components/jquery@2.1.4",
+    "lodash": "npm:lodash@3.10.1",
     "pixi.js": "npm:pixi.js@3.0.6",
     "three": "npm:three@0.72.0",
+    "web-audio-analyser": "npm:web-audio-analyser@2.0.0",
     "github:jspm/nodelibs-assert@0.1.0": {
       "assert": "npm:assert@1.3.0"
     },
@@ -145,6 +147,9 @@ System.config({
     "npm:inherits@2.0.1": {
       "util": "github:jspm/nodelibs-util@0.1.0"
     },
+    "npm:lodash@3.10.1": {
+      "process": "github:jspm/nodelibs-process@0.1.2"
+    },
     "npm:path-browserify@0.0.0": {
       "process": "github:jspm/nodelibs-process@0.1.2"
     },
@@ -262,6 +267,9 @@ System.config({
     "npm:util@0.10.3": {
       "inherits": "npm:inherits@2.0.1",
       "process": "github:jspm/nodelibs-process@0.1.2"
+    },
+    "npm:web-audio-analyser@2.0.0": {
+      "fs": "github:jspm/nodelibs-fs@0.1.2"
     },
     "npm:xtend@2.1.2": {
       "object-keys": "npm:object-keys@0.4.0"

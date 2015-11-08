@@ -90,7 +90,9 @@
       "clamp": "npm:clamp@^1.0.1",
       "gsap": "npm:gsap@^1.18.0",
       "jquery": "github:components/jquery@^2.1.4",
-      "three": "npm:three@^0.72.0"
+      "lodash": "npm:lodash@^3.10.1",
+      "three": "npm:three@^0.72.0",
+      "web-audio-analyser": "npm:web-audio-analyser@^2.0.0"
     },
     "devDependencies": {
       "babel": "npm:babel-core@^5.8.24",

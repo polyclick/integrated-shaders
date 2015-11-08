@@ -3,15 +3,24 @@
 import THREE from 'three'
 import TweenMax from 'gsap'
 import $ from 'jquery'
+import _ from 'lodash'
 import clamp from 'clamp'
+import analyser from 'web-audio-analyser'
 
 class App {
   constructor() {
+
+    this.SCALE_MULTIPLIER_LOW = 0.25
+    this.SCALE_MULTIPLIER_HIGH = 4.0
+
     this.camera = null
     this.scene = null
     this.renderer = null
     this.mesh = null
+    this.time = null
     this.clock = null
+
+    this.previousMousePosition = null
 
     // forked audio context
     this.audioContext = new (window.AudioContext ||
@@ -20,16 +29,28 @@ class App {
       window.oAudioContext ||
       window.msAudioContext)()
     this.audio = null
+    this.analyser = null
+    this.audioCurrentTime = null
 
     this.params = {
       normalizedMousePosition: 0
     }
+
+    this.zoomInOnce = _.once(this.zoomIn)
+    this.transitionToMoreStripesOnce = _.once(this.transitionToMoreStripes)
 
     this.init()
     this.addListeners()
   }
 
   init() {
+
+    // mobile
+    if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ) {
+      $('html').addClass('detector-mobile-unsupported')
+      return;
+    }
+
     // renderer
     this.renderer = new THREE.WebGLRenderer()
     this.renderer.setPixelRatio(window.devicePixelRatio)
@@ -38,7 +59,7 @@ class App {
 
     // camera
     this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 1000)
-    this.camera.position.z = 400
+    this.camera.position.z = 300
 
     // scene
     this.scene = new THREE.Scene()
@@ -49,8 +70,9 @@ class App {
       uniforms: {
         u_time: { type: 'f', value: 1.0 },
         u_resolution: { type: 'v2', value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
-        u_volume: { type: 'f', value: 1.0 },
-        u_fft: { type: 'fv1', value: [] }
+        u_volume: { type: 'f', value: 0.0 },
+        u_fft: { type: 'fv1', value: [] },
+        u_multiplier: { type: 'f', value: 35.0 }
       },
       vertexShader: document.getElementById('vertexShader').textContent,
       fragmentShader: document.getElementById('fragmentShader').textContent
@@ -64,43 +86,19 @@ class App {
     // clock
     this.clock = new THREE.Clock()
 
-    // audio
+    // audio & analyser
     this.audio = new Audio()
-
     this.audio.addEventListener('canplay', () => {
-      this.monitorVolumeOnStream(this.audio)
+      this.analyser = analyser(this.audio, this.audioContext, { audible: true, stereo: false })
+      this.analyser.analyser.smoothingTimeConstant = 0.05;
       this.audio.play()
     }, false)
+    this.audio.addEventListener('timeupdate', () => {
+      this.audioCurrentTime = this.audio.currentTime
+    }, false);
 
     this.audio.src = 'audio/slumberjack-horus.mp3'
 
-    // // audio
-    // SoundcloudBadge({
-    //   client_id: '7fb1348d9e4adc9440ffb61b4b210e66',
-    //   song: 'https://soundcloud.com/slumberjack-music/horus-1',
-    //   dark: false,
-    //   getFonts: true
-    // }, (err, src, data, div) => {
-    //   if (err) throw err
-
-
-    //   //this.audio.crossOrigin = 'Anonymous'
-    //   //this.audio.loop = true
-    //   // this.audio.addEventListener('canplay', () => {
-    //   //   console.log('Playing audio...')
-    //   //   this.audio.play()
-    //   // }, false)
-
-
-
-    //   //this.monitorVolumeOnStream(this.audio)
-
-    //   // Metadata related to the song
-    //   // retrieved by the API.
-    //   console.log(data)
-    // })
-
-    // https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Visualizations_with_Web_Audio_API
 
     // render & animation ticker
     TweenMax.ticker.fps(60)
@@ -112,8 +110,25 @@ class App {
 
   addListeners() {
     $(window).mousemove((event) => {
+
+      // if no position, reset to current position
+      if (!this.previousMousePosition)
+        this.previousMousePosition = { x: event.pageX, y: event.pageY }
+
+      // pythagoras for distance
+      let a = this.previousMousePosition.x - event.pageX
+      let b = this.previousMousePosition.y - event.pageY
+      let dist = Math.sqrt(Math.pow((a), 2) + Math.pow((b), 2))
+
       var normalizedMousePosition = (-2 * event.pageX / $(window).width()) + 1
-      TweenMax.to(this.params, 0.25, { normalizedMousePosition: normalizedMousePosition })
+      TweenMax.to(this.params, 1, { normalizedMousePosition: normalizedMousePosition, ease:Power3.easeOut })
+
+      // prepare for next cycle
+      this.previousMousePosition = { x: event.pageX, y: event.pageY }
+    })
+
+    $(window).click(() => {
+      console.log(this.audio.currentTime)
     })
   }
 
@@ -123,10 +138,82 @@ class App {
   }
 
   animate() {
-    // this.mesh.rotation.x += 0.0025
-    // this.mesh.rotation.y -= 0.005
+
+    // rotate mesh
     this.mesh.rotation.y = Math.PI * this.params.normalizedMousePosition
+
+    // update time uniform
     this.mesh.material.uniforms.u_time.value = this.clock.getElapsedTime()
+
+    // analyse audio
+    if (this.analyser) {
+      //let waveform = this.analyser.waveform()
+      //let size = waveform.length
+
+      // the amount of bars we want to show
+      // 2, 4, 8, 16, 32, 64, ...
+      const barsCount = 32
+
+      // get a snapshot of the frequencies
+      // this method return all the frequencies (depending on the fft size)
+      // so if 1024 measure points are too much, group them together, see below
+      let frequencies = this.analyser.frequencies()
+      let size = frequencies.length
+
+      // the amount of frequencies per bar (we have to group together)
+      let frequenciesPerBar = size / barsCount
+
+
+
+      // group frequencies together in frequency bars
+      // we do this by summing up the frequencies that belong to the same bar and averaging them out
+      // and when we are there, normalize to keep them between 0 and 1
+      let barsData = []
+      for (let barIndex = 0; barIndex < barsCount; barIndex++) {
+        let sum = 0
+        for (let frequencyIndex = 0; frequencyIndex < frequenciesPerBar; frequencyIndex++) {
+          sum += frequencies[(barIndex * frequenciesPerBar) + frequencyIndex]
+        }
+        barsData[barIndex] = sum / frequenciesPerBar / 256
+      }
+
+
+
+      // calculate the average level over all the frequencies together
+      // and normalize
+      let level = 0
+      for (let i = 0; i < frequencies.length; i++)
+        level += frequencies[i] / 256
+      level /= frequencies.length
+
+      // let lowLevel = 0
+      // let lowFrequencies = frequencies.slice(0, Math.round(frequencies.length / 3))
+      // for (let i = 0; i < lowFrequencies.length; i++)
+      //   lowLevel += lowFrequencies[i] / 256
+      // lowLevel /= lowFrequencies.length
+
+      // scale up on higher volumes
+      let multiplier = this.audioCurrentTime > 38.35 ? this.SCALE_MULTIPLIER_HIGH : this.SCALE_MULTIPLIER_LOW
+      this.mesh.scale.x = 0.85 + (multiplier * level)
+      //this.mesh.material.uniforms.u_multiplier.value = this.audioCurrentTime > 38.45
+
+      if (this.audioCurrentTime > 37.00) {
+        this.transitionToMoreStripesOnce()
+      }
+
+      if (this.audioCurrentTime > 38.35) {
+        this.zoomInOnce()
+      }
+    }
+  }
+
+  transitionToMoreStripes() {
+    TweenMax.to(this.mesh.material.uniforms.u_multiplier, 1.1, {value:100.0, ease:Power1.easeInOut});
+  }
+
+  zoomIn() {
+    this.camera.fov = 55;
+    this.camera.updateProjectionMatrix()
   }
 
   render() {
@@ -134,6 +221,7 @@ class App {
   }
 
   resize() {
+
     // update camera
     this.camera.aspect = window.innerWidth / window.innerHeight
     this.camera.updateProjectionMatrix()
