@@ -1,0 +1,142 @@
+@import url(https://fonts.googleapis.com/css?family=Open+Sans:400,700);
+
+html,
+body {
+  margin: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+body {
+  background-color: #000;
+  font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 14px;
+
+  -webkit-font-smoothing: antialiased !important;
+  font-smoothing: subpixel-antialiased;
+  text-rendering: optimizeLegibility !important;
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, .004);
+}
+
+a,
+a:link,
+a:visited {
+  color: #fff;
+  text-decoration: none;
+}
+
+.track {
+  bottom: 25px;
+  color: #fff;
+  left: 25px;
+  position: fixed;
+  z-index: 50;
+}
+
+.message {
+  background-color: #fff;
+  display: block;
+  padding: 20px;
+
+  .content {
+    .title {
+      font-size: 125%;
+      font-weight: bold;
+    }
+
+    p {
+      margin: 0;
+    }
+
+    a,
+    a:link,
+    a:visited {
+      color: #333;
+      font-weight: bold;
+    }
+  }
+
+  &.icon {
+    svg {
+      float: left;
+      height: 40px;
+      margin-left: 5px;
+      width: 40px;
+    }
+
+    .content {
+      margin-left: 65px;
+    }
+  }
+}
+
+.description {
+  display: block;
+  position: absolute;
+  text-align: center;
+  top: 10px;
+  width: 100%;
+  z-index: 5000;
+
+  .detector-no-webgl & {
+    display: none;
+  }
+
+  .message {
+    display: inline-block;
+  }
+}
+
+.fallback-wrapper {
+  display: none;
+  font-size: 12px;
+  height: 100%;
+  left: 0;
+  line-height: 1.5;
+  position: absolute;
+  top: 0;
+  width: 100%;
+}
+
+.fallback {
+  display: table-cell;
+  text-align: center;
+  vertical-align: middle;
+
+  .fallback-content {
+    display: inline-block;
+    padding: 5%;
+    text-align: left;
+  }
+
+  .message {
+    margin-bottom: 20px;
+  }
+
+  .video {
+    height: 0;
+    padding-bottom: 56.25%; // 16:9
+    position: relative;
+
+    iframe,
+    object,
+    embed {
+      height: 100%;
+      left: 0;
+      position: absolute;
+      top: 0;
+      width: 100%;
+    }
+  }
+}
+
+.detector-mobile-unsupported {
+  canvas,
+  .track {
+    display: none;
+  }
+
+  .fallback-wrapper {
+    display: table;
+  }
+}
